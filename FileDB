@@ -1,0 +1,39 @@
+import pickle
+from DB import Database
+import os
+
+
+class FileDatabase(Database):
+    def __init__(self, filename="database.pkl"):
+        """
+        Initializes the FileDatabase with an optional dictionary and filename.
+        """
+        super().__init__()  # Initialize the parent class
+        self.filename = filename
+        if not os.path.exists(self.filename):
+            self.dump()
+
+    def dump(self):
+        with open(self.filename, 'wb')as file:
+            pickle.dump(self.data, file)
+
+    def load(self):
+        """
+            gets the data from a file and puts it into database
+        """
+        with open(self.filename, 'rb') as file:
+            self.data = pickle.load(file)
+
+    def delete_value(self, key):
+        self.load()
+        super().delete_value(key)
+        self.dump()
+
+    def get_value(self, key):
+        self.load()
+        return super().get_value(key)
+
+    def set_value(self, key, value):
+        self.load()
+        super().set_value(key, value)
+        self.dump()
