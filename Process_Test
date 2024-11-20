@@ -1,0 +1,68 @@
+import multiprocessing
+from SyncDB import SyncDatabase
+
+
+class Test:
+    def __init__(self):
+        self.processes = []
+        self.db = SyncDatabase("database.pkl", "processes")
+
+    def number1(self):
+        self.db.set_value('cyber', 'cool')
+
+    def number2(self):
+        return self.db.get_value('cyber')
+
+    def number3(self):
+        process1 = multiprocessing.Process(target=self.db.get_value, args=('cyber',))
+        process2 = multiprocessing.Process(target=self.db.set_value, args=('database', 'test'))
+        process1.start()
+        self.processes.append(process1)
+        process2.start()
+        self.processes.append(process2)
+        for p in self.processes:
+            p.join()
+
+    def number4(self):
+        process1 = multiprocessing.Process(target=self.db.set_value, args=('beginning', "ending"))
+        process2 = multiprocessing.Process(target=self.db.get_value, args=('beginning',))
+        process1.start()
+        self.processes.append(process1)
+        process2.start()
+        self.processes.append(process2)
+        for p in self.processes:
+            p.join()
+
+    def number5(self):
+        for i in range(8):
+            process = multiprocessing.Process(target=self.db.get_value, args=('cyber',))
+            process.start()
+            self.processes.append(process)
+
+    def number6(self):
+        for i in range(8):
+            process = multiprocessing.Process(target=self.db.get_value, args=('cyber',))
+            process.start()
+            self.processes.append(process)
+
+        process1 = multiprocessing.Process(target=self.db.set_value, args=('cyber', 'fun'))
+        process1.start()
+        process1.join()
+
+        for j in range(8):
+            process = multiprocessing.Process(target=self.db.get_value, args=('cyber',))
+            process.start()
+            self.processes.append(process)
+
+        for p in self.processes:
+            p.join()
+
+
+if __name__ == "__main__":
+    test = Test()
+    test.number1()
+    test.number2()
+    test.number3()
+    test.number4()
+    test.number5()
+    test.number6()
