@@ -1,0 +1,91 @@
+import pickle
+import threading
+import multiprocessing
+import logging
+from DB import Database
+
+# Configure logging
+logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
+MAX_READERS = 10
+
+
+class SyncDatabase(Database):
+    def __init__(self, filename="database.pkl", mode="threads"):
+        """
+        Initializes the SyncDatabase with an optional dictionary, filename, and mode.
+        Mode can be either 'threads' or 'processes'.
+        """
+        super().__init__()  # Initialize the parent class with optional data
+        self.filename = filename
+        self.mode = mode
+
+        if self.mode == "threads":
+            self.read_semaphore = threading.Semaphore(MAX_READERS)
+            self.write_lock = threading.Lock()
+            logging.debug("Database initialized in thread mode.")
+        elif self.mode == "processes":
+            self.read_semaphore = multiprocessing.Semaphore(MAX_READERS)
+            self.write_lock = multiprocessing.Lock()
+            logging.debug("Database initialized in process mode.")
+        else:
+            logging.error("Invalid mode provided: %s", mode)
+            raise ValueError("Mode must be 'threads' or 'processes'.")
+
+    def get_read_lock(self):
+        logging.debug("Attempting to acquire read lock.")
+        self.read_semaphore.acquire()
+        logging.debug("Read lock acquired.")
+
+    def release_read_lock(self):
+        logging.debug("Attempting to release read lock.")
+        self.read_semaphore.release()
+        logging.debug("Read lock released.")
+
+    def get_write_lock(self):
+        logging.debug("Attempting to acquire write lock.")
+        self.write_lock.acquire()
+        logging.debug("Write lock acquired. Blocking new readers.")
+        for i in range(MAX_READERS):
+            self.read_semaphore.acquire()
+        logging.debug("All read locks acquired for write operation.")
+
+    def release_write_lock(self):
+        logging.debug("Attempting to release write lock.")
+        for i in range(MAX_READERS):
+            self.read_semaphore.release()
+        logging.debug("All read locks released after write operation.")
+        self.write_lock.release()
+        logging.debug("Write lock released.")
+
+    def delete_value(self, key):
+        logging.info("Attempting to delete key: %s", key)
+        self.get_write_lock()
+        try:
+            super().delete_value(key)
+            logging.info("Successfully deleted key: %s", key)
+        except KeyError:
+            logging.warning("Key not found for deletion: %s", key)
+        finally:
+            self.release_write_lock()
+
+    def get_value(self, key):
+        logging.info("Attempting to retrieve key: %s", key)
+        self.get_read_lock()
+        try:
+            value = super().get_value(key)
+            logging.info("Successfully retrieved key: %s with value: %s", key, value)
+            return value
+        except KeyError:
+            logging.warning("Key not found: %s", key)
+            return None
+        finally:
+            self.release_read_lock()
+
+    def set_value(self, key, value):
+        logging.info("Attempting to set key: %s with value: %s", key, value)
+        self.get_write_lock()
+        try:
+            super().set_value(key, value)
+            logging.info("Successfully set key: %s with value: %s", key, value)
+        finally:
+            self.release_write_lock()
