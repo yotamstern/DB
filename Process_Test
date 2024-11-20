@@ -1,68 +1,122 @@
-import multiprocessing
+import threading
 from SyncDB import SyncDatabase
 
 
 class Test:
+    """
+    A class to demonstrate threading with a shared database-like resource.
+
+    Attributes:
+        threads (list): A list to hold thread objects.
+        db (SyncDatabase): An instance of SyncDatabase to simulate database operations.
+    """
+
     def __init__(self):
-        self.processes = []
-        self.db = SyncDatabase("database.pkl", "processes")
+        """
+        Initializes the Test class with a SyncDatabase instance and an empty thread list.
+        """
+        self.threads = []
+        self.db = SyncDatabase("database.pkl", "threads")  # Initialize SyncDatabase
 
     def number1(self):
-        self.db.set_value('cyber', 'cool')
+        """
+        Sets a key-value pair in the database.
+
+        Operation:
+            Sets the key 'cyber' to the value 'cool'.
+        """
+        self.db.set_value('cyber', 'cool')  # Setting a value in the database
 
     def number2(self):
-        return self.db.get_value('cyber')
+        """
+        Retrieves a value from the database.
+
+        Returns:
+            The value associated with the key 'cyber'.
+        """
+        return self.db.get_value('cyber')  # Fetching a value from the database
 
     def number3(self):
-        process1 = multiprocessing.Process(target=self.db.get_value, args=('cyber',))
-        process2 = multiprocessing.Process(target=self.db.set_value, args=('database', 'test'))
-        process1.start()
-        self.processes.append(process1)
-        process2.start()
-        self.processes.append(process2)
-        for p in self.processes:
-            p.join()
+        """
+        Demonstrates concurrent read and write operations using threads.
+
+        Threads:
+            - Thread 1 retrieves the value of the key 'cyber'.
+            - Thread 2 sets the key 'database' to the value 'test'.
+        """
+        thread1 = threading.Thread(target=self.db.get_value, args=('cyber',))  # Reading thread
+        thread2 = threading.Thread(target=self.db.set_value, args=('database', 'test'))  # Writing thread
+        thread1.start()  # Start reading
+        self.threads.append(thread1)
+        thread2.start()  # Start writing
+        self.threads.append(thread2)
+        for t in self.threads:
+            t.join()  # Wait for threads to complete
 
     def number4(self):
-        process1 = multiprocessing.Process(target=self.db.set_value, args=('beginning', "ending"))
-        process2 = multiprocessing.Process(target=self.db.get_value, args=('beginning',))
-        process1.start()
-        self.processes.append(process1)
-        process2.start()
-        self.processes.append(process2)
-        for p in self.processes:
-            p.join()
+        """
+        Demonstrates concurrent operations with setting and retrieving values.
+
+        Threads:
+            - Thread 1 sets the key 'beginning' to the value 'ending'.
+            - Thread 2 retrieves the value of the key 'beginning'.
+        """
+        thread1 = threading.Thread(target=self.db.set_value, args=('beginning', "ending"))  # Writing thread
+        thread2 = threading.Thread(target=self.db.get_value, args=('beginning',))  # Reading thread
+        thread1.start()  # Start writing
+        self.threads.append(thread1)
+        thread2.start()  # Start reading
+        self.threads.append(thread2)
+        for t in self.threads:
+            t.join()  # Wait for threads to complete
 
     def number5(self):
+        """
+        Spawns multiple threads to perform concurrent read operations.
+
+        Operation:
+            8 threads read the value of the key 'cyber' concurrently.
+        """
         for i in range(8):
-            process = multiprocessing.Process(target=self.db.get_value, args=('cyber',))
-            process.start()
-            self.processes.append(process)
+            thread = threading.Thread(target=self.db.get_value, args=('cyber',))  # Reading thread
+            thread.start()
+            self.threads.append(thread)
 
     def number6(self):
+        """
+        Demonstrates a mix of concurrent read and write operations.
+
+        Operation:
+            - 8 threads read the value of the key 'cyber'.
+            - A single thread writes the key 'cyber' to the value 'fun'.
+            - Another 8 threads read the value of the key 'cyber'.
+        """
+        # First set of read operations
         for i in range(8):
-            process = multiprocessing.Process(target=self.db.get_value, args=('cyber',))
-            process.start()
-            self.processes.append(process)
+            thread = threading.Thread(target=self.db.get_value, args=('cyber',))  # Reading thread
+            thread.start()
+            self.threads.append(thread)
 
-        process1 = multiprocessing.Process(target=self.db.set_value, args=('cyber', 'fun'))
-        process1.start()
-        process1.join()
+        # Write operation
+        thread1 = threading.Thread(target=self.db.set_value, args=('cyber', 'fun'))  # Writing thread
+        thread1.start()
+        thread1.join()  # Ensure the write is completed before the next reads
 
+        # Second set of read operations
         for j in range(8):
-            process = multiprocessing.Process(target=self.db.get_value, args=('cyber',))
-            process.start()
-            self.processes.append(process)
+            thread = threading.Thread(target=self.db.get_value, args=('cyber',))  # Reading thread
+            thread.start()
+            self.threads.append(thread)
 
-        for p in self.processes:
-            p.join()
+        for t in self.threads:
+            t.join()  # Wait for all threads to complete
 
 
-if __name__ == "__main__":
-    test = Test()
-    test.number1()
-    test.number2()
-    test.number3()
-    test.number4()
-    test.number5()
-    test.number6()
+# Instantiate and test the class
+test = Test()
+test.number1()  # Test setting a value
+test.number2()  # Test retrieving a value
+test.number3()  # Test concurrent read/write
+test.number4()  # Test setting and reading concurrently
+test.number5()  # Test multiple concurrent reads
+test.number6()  # Test mixed read and write operations
