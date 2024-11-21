@@ -1,122 +1,106 @@
-import threading
+import multiprocessing
 from SyncDB import SyncDatabase
-
 
 class Test:
     """
-    A class to demonstrate threading with a shared database-like resource.
+    A class to test multiprocessing functionality with a synchronized database.
 
     Attributes:
-        threads (list): A list to hold thread objects.
-        db (SyncDatabase): An instance of SyncDatabase to simulate database operations.
+        processes (list): A list to hold the multiprocessing Process objects.
+        db (SyncDatabase): An instance of the synchronized database.
     """
-
+    
     def __init__(self):
         """
-        Initializes the Test class with a SyncDatabase instance and an empty thread list.
+        Initializes the Test class with a database instance and a process list.
         """
-        self.threads = []
-        self.db = SyncDatabase("database.pkl", "threads")  # Initialize SyncDatabase
+        self.processes = []  # List to keep track of active processes
+        self.db = SyncDatabase("database.pkl", "processes")  # Initialize the database with file and name
 
     def number1(self):
         """
-        Sets a key-value pair in the database.
-
-        Operation:
-            Sets the key 'cyber' to the value 'cool'.
+        Sets a key-value pair ('cyber', 'cool') in the database.
         """
-        self.db.set_value('cyber', 'cool')  # Setting a value in the database
+        self.db.set_value('cyber', 'cool')
 
     def number2(self):
         """
-        Retrieves a value from the database.
-
+        Retrieves the value associated with the key 'cyber' from the database.
         Returns:
-            The value associated with the key 'cyber'.
+            str: The value stored in the database for the key 'cyber'.
         """
-        return self.db.get_value('cyber')  # Fetching a value from the database
+        return self.db.get_value('cyber')
 
     def number3(self):
         """
-        Demonstrates concurrent read and write operations using threads.
-
-        Threads:
-            - Thread 1 retrieves the value of the key 'cyber'.
-            - Thread 2 sets the key 'database' to the value 'test'.
+        Demonstrates multiprocessing with one process getting a value and another setting a value in the database.
         """
-        thread1 = threading.Thread(target=self.db.get_value, args=('cyber',))  # Reading thread
-        thread2 = threading.Thread(target=self.db.set_value, args=('database', 'test'))  # Writing thread
-        thread1.start()  # Start reading
-        self.threads.append(thread1)
-        thread2.start()  # Start writing
-        self.threads.append(thread2)
-        for t in self.threads:
-            t.join()  # Wait for threads to complete
+        process1 = multiprocessing.Process(target=self.db.get_value, args=('cyber',))  # Retrieve the value of 'cyber'
+        process2 = multiprocessing.Process(target=self.db.set_value, args=('database', 'test'))  # Set a new key-value pair
+        process1.start()  # Start the first process
+        self.processes.append(process1)  # Keep track of the process
+        process2.start()  # Start the second process
+        self.processes.append(process2)  # Keep track of the process
+
+        for p in self.processes:  # Ensure all processes complete before moving on
+            p.join()
 
     def number4(self):
         """
-        Demonstrates concurrent operations with setting and retrieving values.
-
-        Threads:
-            - Thread 1 sets the key 'beginning' to the value 'ending'.
-            - Thread 2 retrieves the value of the key 'beginning'.
+        Demonstrates multiprocessing with one process setting a value and another retrieving it.
         """
-        thread1 = threading.Thread(target=self.db.set_value, args=('beginning', "ending"))  # Writing thread
-        thread2 = threading.Thread(target=self.db.get_value, args=('beginning',))  # Reading thread
-        thread1.start()  # Start writing
-        self.threads.append(thread1)
-        thread2.start()  # Start reading
-        self.threads.append(thread2)
-        for t in self.threads:
-            t.join()  # Wait for threads to complete
+        process1 = multiprocessing.Process(target=self.db.set_value, args=('beginning', "ending"))  # Set a key-value pair
+        process2 = multiprocessing.Process(target=self.db.get_value, args=('beginning',))  # Retrieve the value
+        process1.start()  # Start the first process
+        self.processes.append(process1)  # Track the process
+        process2.start()  # Start the second process
+        self.processes.append(process2)  # Track the process
+
+        for p in self.processes:  # Wait for all processes to complete
+            p.join()
 
     def number5(self):
         """
-        Spawns multiple threads to perform concurrent read operations.
-
-        Operation:
-            8 threads read the value of the key 'cyber' concurrently.
+        Launches multiple processes (8 in this case) to retrieve the value associated with the key 'cyber'.
         """
-        for i in range(8):
-            thread = threading.Thread(target=self.db.get_value, args=('cyber',))  # Reading thread
-            thread.start()
-            self.threads.append(thread)
+        for i in range(8):  # Launch 8 processes
+            process = multiprocessing.Process(target=self.db.get_value, args=('cyber',))  # Retrieve the value of 'cyber'
+            process.start()  # Start the process
+            self.processes.append(process)  # Track the process
 
     def number6(self):
         """
-        Demonstrates a mix of concurrent read and write operations.
-
-        Operation:
-            - 8 threads read the value of the key 'cyber'.
-            - A single thread writes the key 'cyber' to the value 'fun'.
-            - Another 8 threads read the value of the key 'cyber'.
+        Combines multiple readers and a writer process. First, launches 8 processes to retrieve a value,
+        then starts a writer process to update the value, and finally launches 8 more reader processes.
         """
-        # First set of read operations
+        # Start 8 processes to read the value of 'cyber'
         for i in range(8):
-            thread = threading.Thread(target=self.db.get_value, args=('cyber',))  # Reading thread
-            thread.start()
-            self.threads.append(thread)
+            process = multiprocessing.Process(target=self.db.get_value, args=('cyber',))
+            process.start()
+            self.processes.append(process)
 
-        # Write operation
-        thread1 = threading.Thread(target=self.db.set_value, args=('cyber', 'fun'))  # Writing thread
-        thread1.start()
-        thread1.join()  # Ensure the write is completed before the next reads
+        # Start a process to update the value of 'cyber'
+        process1 = multiprocessing.Process(target=self.db.set_value, args=('cyber', 'fun'))
+        process1.start()
+        process1.join()  # Ensure the writer process completes before continuing
 
-        # Second set of read operations
+        # Start 8 more processes to read the updated value of 'cyber'
         for j in range(8):
-            thread = threading.Thread(target=self.db.get_value, args=('cyber',))  # Reading thread
-            thread.start()
-            self.threads.append(thread)
+            process = multiprocessing.Process(target=self.db.get_value, args=('cyber',))
+            process.start()
+            self.processes.append(process)
 
-        for t in self.threads:
-            t.join()  # Wait for all threads to complete
+        # Wait for all processes to complete
+        for p in self.processes:
+            p.join()
 
 
-# Instantiate and test the class
-test = Test()
-test.number1()  # Test setting a value
-test.number2()  # Test retrieving a value
-test.number3()  # Test concurrent read/write
-test.number4()  # Test setting and reading concurrently
-test.number5()  # Test multiple concurrent reads
-test.number6()  # Test mixed read and write operations
+if __name__ == "__main__":
+    # Example usage of the Test class
+    test = Test()
+    test.number1()  # Set a value in the database
+    test.number2()  # Retrieve a value from the database
+    test.number3()  # Demonstrate reading and writing via multiprocessing
+    test.number4()  # Another example of multiprocessing with read and write
+    test.number5()  # Demonstrate launching multiple reader processes
+    test.number6()  # Combine readers and writers in a complex multiprocessing example
